@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Instala deps do PWA (web)
+      - name: Instalar deps Web
+        working-directory: apps/web
+        run: npm ci
+
+      # Instala deps da API
+      - name: Instalar deps API
+        working-directory: apps/api
+        run: npm ci
+
+      # Instala navegadores do Playwright
+      - name: Instalar Playwright browsers
+        working-directory: apps/web
+        run: npx playwright install --with-deps
+
+      # Roda os testes E2E subindo o dev server antes
+      - name: Testes E2E (Playwright)
+        working-directory: apps/web
+        run: |
+          npm run dev -- --host 0.0.0.0 --port 8080 &
+          DEV_PID=$!
+          npx playwright test
+          kill $DEV_PID
+
+      # Build do PWA
+      - name: Build Web
+        working-directory: apps/web
+        run: npm run build
+
+      # Artefato para GitHub Pages
+      - name: Upload para GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
