@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Baixa o código do repositório
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 20 (mesmo que você usa localmente)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Instala dependências do PWA (web)
+      - name: Instalar deps Web
+        working-directory: apps/web
+        run: npm ci
+
+      # Instala dependências da API
+      - name: Instalar deps API
+        working-directory: apps/api
+        run: npm ci
+
+      # Instala navegadores do Playwright
+      - name: Instalar Playwright browsers
+        working-directory: apps/web
+        run: npx playwright install --with-deps
+
+      # Roda os testes E2E (aquele que já passou na sua máquina)
+      - name: Testes E2E (Playwright)
+        working-directory: apps/web
+        run: npx playwright test
+
+      # Build do PWA (Vite)
+      - name: Build Web
+        working-directory: apps/web
+        run: npm run build
+
+      # Sobe o dist como artefato do CI
+      - name: Upload artefato dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
