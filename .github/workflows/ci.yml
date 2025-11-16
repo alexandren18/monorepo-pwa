@@ -11,22 +11,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Baixa o código do repositório
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Node 20 (mesmo que você usa localmente)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Instala dependências do PWA (web)
+      # Instala deps do PWA (web)
       - name: Instalar deps Web
         working-directory: apps/web
         run: npm ci
 
-      # Instala dependências da API
+      # Instala deps da API
       - name: Instalar deps API
         working-directory: apps/api
         run: npm ci
@@ -36,28 +34,21 @@ jobs:
         working-directory: apps/web
         run: npx playwright install --with-deps
 
-      
-        # Roda os testes E2E (subindo o dev server antes)
+      # Roda os testes E2E subindo o dev server antes
       - name: Testes E2E (Playwright)
-    working-directory: apps/web
-    run: |
-      # sobe o Vite na porta 8080 em segundo plano
-      npm run dev -- --host 0.0.0.0 --port 8080 &
-      DEV_PID=$!
-
-      # executa os testes E2E
-      npx playwright test
-
-      # derruba o servidor depois dos testes
-      kill $DEV_PID
-
+        working-directory: apps/web
+        run: |
+          npm run dev -- --host 0.0.0.0 --port 8080 &
+          DEV_PID=$!
+          npx playwright test
+          kill $DEV_PID
 
       # Build do PWA (Vite)
       - name: Build Web
         working-directory: apps/web
         run: npm run build
 
-      # Sobe o dist como artefato do CI
+      # Sobe o dist como artefato (pra avaliação do professor)
       - name: Upload artefato dist
         uses: actions/upload-artifact@v4
         with:
